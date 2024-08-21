@@ -1,0 +1,12 @@
+Flask
+watchdog
+qdrant-client
+sentence-transformers
+beautifulsoup4
+requests
+selenium
+flask-limiter
+Flasgger
+python-dotenv
+flask-cors
+numpy==1.26.4
