@@ -18,15 +18,14 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flasgger import Swagger
 import uuid
-from flask_cors import CORS,cross_origin    
- 
-# from PIL import Image  
+from flask_cors import CORS,cross_origin
+
+# from PIL import Image
 # from io import BytesIO
-# from torchvision import models as ModelVision, transforms   
-# import torch 
-app = Flask(__name__) 
+# from torchvision import models as ModelVision, transforms
+# import torch
+app = Flask(__name__)
 CORS(app)
-app.config['CORS_HEADERS'] = 'Content-Type'
 # Initialize Flasgger
 swagger = Swagger(app)
 
@@ -89,7 +88,6 @@ def get_current_timestamp():
 #     with torch.no_grad():
 #         image_vector = image_model(image_tensor).flatten().numpy()
 #     return image_vector
-
 
 
 @app.route('/crawl', methods=['POST'])
@@ -182,7 +180,7 @@ def productBySellerName():
     search_result = qdrant_client.search(
         collection_name=Config.get('PRODUCT_COLLECTION'),
         query_filter=query_filter,
-        query_vector=query_vector,    
+        query_vector=query_vector,
         offset=data.get('offset', 0),
         limit=data.get('limit', 10),
     )
@@ -256,6 +254,7 @@ def get_seller(id):
     search_result_dicts = [record.dict() for record in search_result]
     return jsonify(search_result_dicts)
 
+
 @app.route('/product/<int:id>', methods=['GET'])
 def get_product(id):
     search_result = qdrant_client.retrieve(
@@ -264,7 +263,6 @@ def get_product(id):
     )
     search_result_dicts = [record.dict() for record in search_result]
     return jsonify(search_result_dicts)
-
 
 
 @app.route('/fetsh', methods=['GET'])
@@ -310,127 +308,198 @@ def fetchData():
 
 # Flask route for the search function
 @app.route('/search', methods=['POST'])
-@cross_origin()
 def search():
     """
-      Perform a search operation with pagination.
-      ---
-      tags:
-        - Search
-      parameters:
-        - name: keyword
-          in: formData
-          type: string
-          required: true
-          description: The keyword used for searching the items.
-          example: "example"
-        - name: offset
-          in: formData
-          type: integer
-          required: true
-          description: The number of items to skip for pagination. Useful for implementing paginated results.
-          example: 0
-        - name: limit
-          in: formData
-          type: integer
-          required: true
-          description: The maximum number of items to return in the response. Controls the page size.
-          example: 10
-      responses:
-        200:
-          description: A list of search results and total count of items.
-          schema:
-            type: object
-            properties:
-              results:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      description: Unique identifier for the item.
-                      example: 1
-                    name:
-                      type: string
-                      description: The name of the item.
-                      example: "Item Name"
-                    description:
-                      type: string
-                      description: A description of the item.
-                      example: "A detailed description of the item."
-              total_count:
-                type: integer
-                description: The total number of items available that match the search criteria.
-                example: 100
-        400:
-          description: Bad request. The request was invalid or missing parameters.
-          schema:
-            type: object
-            properties:
-              error:
-                type: string
-                example: "Invalid parameters"
-        500:
-          description: Internal server error. An unexpected error occurred on the server.
-          schema:
-            type: object
-            properties:
-              error:
-                type: string
-                example: "Internal server error"
-      """
-    data = request.json
-    search_string = data.get('query', '').lower()
+       Perform a search operation with pagination, filtering, and additional query parameters.
+       ---
+       tags:
+         - Search
+       requestBody:
+         description: JSON object containing search parameters.
+         required: true
+         content:
+           application/json:
+             schema:
+               type: object
+               properties:
+                 keyword:
+                   type: string
+                   description: The keyword used for searching the items.
+                   example: "example"
+                 offset:
+                   type: integer
+                   description: The number of items to skip for pagination.
+                   example: 0
+                 limit:
+                   type: integer
+                   description: The maximum number of items to return in the response.
+                   example: 10
+                 title:
+                   type: string
+                   description: (Optional) Filter results by item title.
+                   example: "Item Title"
+                 priceGte:
+                   type: number
+                   format: float
+                   description: (Optional) Filter results to include items with a price greater than or equal to this value.
+                   example: 10.00
+                 priceLte:
+                   type: number
+                   format: float
+                   description: (Optional) Filter results to include items with a price less than or equal to this value.
+                   example: 100.00
+                 categoryId:
+                   type: string
+                   description: (Optional) Filter results by category ID.
+                   example: "12345"
+                 locationId:
+                   type: string
+                   description: (Optional) Filter results by location ID.
+                   example: "67890"
+       responses:
+         200:
+           description: A list of search results and the total count of items.
+           content:
+             application/json:
+               schema:
+                 type: object
+                 properties:
+                   results:
+                     type: array
+                     items:
+                       type: object
+                       properties:
+                         id:
+                           type: integer
+                           description: Unique identifier for the item.
+                           example: 1
+                         name:
+                           type: string
+                           description: The name of the item.
+                           example: "Item Name"
+                         description:
+                           type: string
+                           description: A detailed description of the item.
+                           example: "A detailed description of the item."
+                         seller:
+                           type: string
+                           description: The seller or publisher of the item.
+                           example: "Seller Name"
+                   total_count:
+                     type: integer
+                     description: The total number of items available that match the search criteria.
+                     example: 100
+         400:
+           description: Bad request. The request was invalid or missing parameters.
+           content:
+             application/json:
+               schema:
+                 type: object
+                 properties:
+                   error:
+                     type: string
+                     example: "Invalid parameters"
+         500:
+           description: Internal server error. An unexpected error occurred on the server.
+           content:
+             application/json:
+               schema:
+                 type: object
+                 properties:
+                   error:
+                     type: string
+                     example: "Internal server error"
+       """
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "Invalid request body, must be JSON"}), 400
 
-    query_filter = None
-    title = data.get("title", '')
-    query_vector = text_to_vector(search_string)
-    if title:  # Only apply filter if title is not empty
-        query_filter = models.Filter(
-            must=[
+        keyword = data.get('keyword', '').lower()
+        offset = data.get('offset')
+        limit = data.get('limit')
+
+        if keyword is None or offset is None or limit is None:
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        query_filter_conditions = []
+
+        # Add title filter if provided
+        title = data.get("title", '')
+        if title:
+            query_filter_conditions.append(
                 models.FieldCondition(
                     key="title",
                     match=models.MatchValue(value=title),
                 )
-            ]
+            )
+
+        # Add price range filter if provided
+        price_gte = data.get('priceGte')
+        price_lte = data.get('priceLte')
+        if price_gte is not None or price_lte is not None:
+            query_filter_conditions.append(
+                models.FieldCondition(
+                    key="price",
+                    range=models.Range(
+                        lt=None,
+                        gt=None,
+                        gte=price_gte,
+                        lte=price_lte,
+                    ),
+                )
+            )
+        #
+        # # Add other filters if needed (e.g., categoryId, locationId)
+        # category_id = data.get('categoryId')
+        # if category_id:
+        #     query_filter_conditions.append(
+        #         models.FieldCondition(
+        #             key="categoryId",
+        #             match=models.MatchValue(value=category_id),
+        #         )
+        #     )
+        #
+        # location_id = data.get('locationId')
+        # if location_id:
+        #     query_filter_conditions.append(
+        #         models.FieldCondition(
+        #             key="locationId",
+        #             match=models.MatchValue(value=location_id),
+        #         )
+        #     )
+
+        query_filter = models.Filter(must=query_filter_conditions) if query_filter_conditions else None
+        print(query_filter)
+        query_vector = text_to_vector(keyword)
+        search_result = qdrant_client.search(
+            collection_name=Config.get('PRODUCT_COLLECTION'),
+            query_vector=query_vector,
+            query_filter=query_filter,
+            search_params=models.SearchParams(hnsw_ef=128, exact=False),
+            offset=offset,
+            limit=limit,
         )
+        search_result_dicts = [record.dict() for record in search_result]
 
-    collection_info = qdrant_client.get_collection(Config.get('PRODUCT_COLLECTION'))
-    total_elements = collection_info.points_count
-    search_result = qdrant_client.search(
-        collection_name=Config.get('PRODUCT_COLLECTION'),
-        query_vector=query_vector,
-        # query_filter=models.FieldCondition(
-        #     key="price",
-        #     match=models.Range(
-        #         gt=None,
-        #         gte=data.get('priceGte'),
-        #         lt=None,
-        #         lte=data.get('priceLte'),
-        #     ),
-        # ),
-        query_filter=query_filter,
-        # with_payload=["price", "catalog", "title",  "metadata"],
-        search_params=models.SearchParams(hnsw_ef=128, exact=False),
-        offset=data.get('offset', 0),
-        limit=data.get('limit', 10),
-    )
-    search_result_dicts = [record.dict() for record in search_result]
+        results = []
+        for item in search_result_dicts:
+            item['payload']['id'] = item['id']
+            item = item['payload']
+            try:
+                item['seller'] = item['metadata']['publisher']
+                del item['metadata']
+            except:
+                item['seller'] = None
+            results.append(item)
 
-    # res = search_result_dicts.map
-    results = []
-    for item in search_result_dicts:
-        item['payload']['id'] = item['id']
-        item = item['payload']
-        # try:
-        #     item['seller'] = item['metadata']['publisher'] 
-        #     del item['metadata']
-        # except:
-        #     item['seller'] = None
-        results.append(item)
+        collection_info = qdrant_client.get_collection(Config.get('PRODUCT_COLLECTION'))
+        total_elements = collection_info.points_count
 
-    return jsonify({"results": results, "totalElements": total_elements})
+        return jsonify({"results": results, "totalElements": total_elements})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/insert', methods=['POST'])
