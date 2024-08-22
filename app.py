@@ -92,7 +92,7 @@ def get_current_timestamp():
 
 @app.route('/crawl', methods=['POST'])
 @limiter.limit("5 per minute")  # Rate limit of crawl
-def crawlData():
+def crawl_data():
     data = request.json
     create_collection()
     update_crawl_time()
@@ -187,6 +187,30 @@ def productBySellerName():
     search_result_dicts = [record.dict() for record in search_result]
     return jsonify({"status": "success", 'data': search_result_dicts})
 
+
+@app.route('/get_category/<int:id>', methods=['GET'])
+def get_category_by_id(id):
+    data = request.json
+    query_vector = text_to_vector(id)
+
+    query_filter = models.Filter(
+        must=[
+            models.FieldCondition(
+                key="id",
+                match=models.MatchValue(value=id),
+            )
+        ]
+    )
+    search_result = qdrant_client.search(
+        collection_name=Config.get('CATAGORIES_COLLECTION'),
+        query_filter=query_filter,
+        query_vector=query_vector,
+        offset=data.get('offset', 0),
+        limit=data.get('limit', 10),
+    )
+    search_result_dicts = [record.dict() for record in search_result]
+    return jsonify({"status": "success", 'data': search_result_dicts})
+
 @app.route('/update_crawl_time', methods=['POST'])
 def update_crawl_time():
     data = request.json
@@ -254,6 +278,16 @@ def get_seller(id):
     search_result_dicts = [record.dict() for record in search_result]
     return jsonify(search_result_dicts)
 
+@app.route('/category/<int:id>', methods=['GET'])
+def get_category(id):
+    search_result = qdrant_client.retrieve(
+        collection_name=Config.get('CATAGORIES_COLLECTION'),
+        ids=[id]
+
+    )
+    search_result_dicts = [record.dict() for record in search_result]
+    return jsonify(search_result_dicts)
+
 
 @app.route('/product/<int:id>', methods=['GET'])
 def get_product(id):
@@ -272,20 +306,12 @@ def fetchData():
     url = "https://www.tayara.tn/ads/c/Immobilier/?page=1"
     siteUrl = requests.get(url)
 
-    # browser = webdriver.Firefox()
-    # browser.get(url)
-    # print(browser.title)
-    # browser.implicitly_wait(10)
-    # submit_btn = browser.find_element(by=By.CSS_SELECTOR,value='button')
-
-    # print(submit_btn)
 
     page = BeautifulSoup(siteUrl.content, 'html.parser')
     articles = page.find_all('article')
 
     for article in articles:
-        body = {}
-        body['id'] = str(uuid.uuid4())
+        body = {'id': str(uuid.uuid4())}
 
         catalog = article.find('span', class_="truncate")
         if catalog:
@@ -486,11 +512,6 @@ def search():
         for item in search_result_dicts:
             item['payload']['id'] = item['id']
             item = item['payload']
-            # try:
-            #     item['seller'] = item['metadata']['publisher']
-            #     del item['metadata']
-            # except:
-            #     item['seller'] = None
             results.append(item)
 
         collection_info = qdrant_client.get_collection(Config.get('PRODUCT_COLLECTION'))
