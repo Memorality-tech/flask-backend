@@ -470,7 +470,7 @@ def search():
         #     )
 
         query_filter = models.Filter(must=query_filter_conditions) if query_filter_conditions else None
-        print(query_filter)
+   
         query_vector = text_to_vector(keyword)
         search_result = qdrant_client.search(
             collection_name=Config.get('PRODUCT_COLLECTION'),
@@ -486,11 +486,11 @@ def search():
         for item in search_result_dicts:
             item['payload']['id'] = item['id']
             item = item['payload']
-            try:
-                item['seller'] = item['metadata']['publisher']
-                del item['metadata']
-            except:
-                item['seller'] = None
+            # try:
+            #     item['seller'] = item['metadata']['publisher']
+            #     del item['metadata']
+            # except:
+            #     item['seller'] = None
             results.append(item)
 
         collection_info = qdrant_client.get_collection(Config.get('PRODUCT_COLLECTION'))
