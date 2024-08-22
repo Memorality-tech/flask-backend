@@ -27,3 +27,9 @@ def create_collection():
             vectors_config=models.VectorParams(size=config.get('VECTOR_SIZE'),
                                                distance=models.Distance[config.get('DISTANCE_METRIC').upper()]),
         )
+def create_collection_catagories():
+        qdrant_client.recreate_collection(
+            collection_name=config.get('CATAGORIES_COLLECTION'),
+            vectors_config=models.VectorParams(size=config.get('VECTOR_SIZE'),
+                                               distance=models.Distance[config.get('DISTANCE_METRIC').upper()]),
+        ) 

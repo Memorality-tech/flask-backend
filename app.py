@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from watchdog.observers import Observer
 from watchdog.events import LoggingEventHandler
-from qdrant_instance import create_collection, qdrant_client, config as Config
+from qdrant_instance import create_collection,create_collection_catagories, qdrant_client, config as Config
 import sys
 import time
 import logging
@@ -18,14 +18,15 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flasgger import Swagger
 import uuid
-from flask_cors import CORS
-
-# from PIL import Image
+from flask_cors import CORS,cross_origin    
+ 
+# from PIL import Image  
 # from io import BytesIO
-# from torchvision import models as ModelVision, transforms
-# import torch
-app = Flask(__name__)
+# from torchvision import models as ModelVision, transforms   
+# import torch 
+app = Flask(__name__) 
 CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 # Initialize Flasgger
 swagger = Swagger(app)
 
@@ -135,7 +136,10 @@ def crawlData():
 
         text_vector = text_to_vector(combined_text)
         result['createdAt'] = get_current_timestamp()
-        result['metadata']['publisher']['sellerId'] = str(uuid.uuid4())
+        result['seller'] = result['metadata']['publisher']
+        result['seller']['subCategory'] = result['metadata']['subCategory']
+        result['seller']['sellerId'] = str(uuid.uuid4())
+        del result['metadata']
         points = [
             models.PointStruct(
                 id=id,
@@ -146,7 +150,8 @@ def crawlData():
         qdrant_client.upsert(collection_name=Config.get('PRODUCT_COLLECTION'), points=points)
 
         # seller part
-        seller = result['metadata']['publisher']
+        seller = result['seller']
+
         seller['createdAt'] = get_current_timestamp()
         text_vector = text_to_vector(seller['name'])
 
@@ -161,6 +166,28 @@ def crawlData():
     return jsonify(
         {"status": "success", "message": "Data inserted successfully", "totalItems": len(tables), 'data': tables})
 
+@app.route('/productsBySellerName', methods=['POST'])
+def productBySellerName():
+    data = request.json
+    query_vector = text_to_vector(data.get('name', ''))
+
+    query_filter = models.Filter(
+        must=[
+            models.FieldCondition(
+                key="seller.name",
+                match=models.MatchValue(value=data.get('name', '')),
+            )
+        ]
+    )
+    search_result = qdrant_client.search(
+        collection_name=Config.get('PRODUCT_COLLECTION'),
+        query_filter=query_filter,
+        query_vector=query_vector,    
+        offset=data.get('offset', 0),
+        limit=data.get('limit', 10),
+    )
+    search_result_dicts = [record.dict() for record in search_result]
+    return jsonify({"status": "success", 'data': search_result_dicts})
 
 @app.route('/update_crawl_time', methods=['POST'])
 def update_crawl_time():
@@ -242,8 +269,7 @@ def get_product(id):
 
 @app.route('/fetsh', methods=['GET'])
 def fetchData():
-    create_collection()
-    id = 0
+    create_collection_catagories()
     # for j in range(1):
     url = "https://www.tayara.tn/ads/c/Immobilier/?page=1"
     siteUrl = requests.get(url)
@@ -258,33 +284,16 @@ def fetchData():
 
     page = BeautifulSoup(siteUrl.content, 'html.parser')
     articles = page.find_all('article')
-    imgs = []
-    prices = []
-    titles = []
-    i = 0
+
     for article in articles:
         body = {}
-        id = id + 1
-        img = article.find('img')
-        body['img'] = img.get('src')
-        body['id'] = id
-        price = article.find('data')
-        if price:
-            body['price'] = price.get('value')
+        body['id'] = str(uuid.uuid4())
 
         catalog = article.find('span', class_="truncate")
         if catalog:
             body['catalog'] = catalog.text
-        localisation = article.find_all('span', class_="truncate")[1]
-        if catalog:
-            body['localisation'] = localisation.text
-        title = article.find('h2')
-        if title:
-            body['title'] = title.text
 
-        combined_text = combine_title_and_localisation(body['title'], body['localisation'], body['catalog'])
-
-        text_vector = text_to_vector(combined_text)
+        text_vector = text_to_vector(body['catalog'])
 
         points = [
             models.PointStruct(
@@ -293,7 +302,7 @@ def fetchData():
                 payload=body
             )
         ]
-        qdrant_client.upsert(collection_name=Config.get('COLLECTION_NAME'), points=points)
+        qdrant_client.upsert(collection_name=Config.get('CATAGORIES_COLLECTION'), points=points)
         finalCrawl.append(body)
 
     return jsonify({"status": "success", "message": "Data inserted successfully", 'data': finalCrawl})
@@ -301,6 +310,7 @@ def fetchData():
 
 # Flask route for the search function
 @app.route('/search', methods=['POST'])
+@cross_origin()
 def search():
     """
       Perform a search operation with pagination.
@@ -413,11 +423,11 @@ def search():
     for item in search_result_dicts:
         item['payload']['id'] = item['id']
         item = item['payload']
-        try:
-            item['seller'] = item['metadata']['publisher']
-            del item['metadata']
-        except:
-            item['seller'] = None
+        # try:
+        #     item['seller'] = item['metadata']['publisher'] 
+        #     del item['metadata']
+        # except:
+        #     item['seller'] = None
         results.append(item)
 
     return jsonify({"results": results, "totalElements": total_elements})
