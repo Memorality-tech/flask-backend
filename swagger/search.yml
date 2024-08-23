@@ -1,0 +1,19 @@
+parameters:
+  - name: body
+    in: body
+    type: object
+    required: true
+    example:  {"keyword": "","title": "","priceGte": null,"priceLte": null,"offset": 0,"limit": 10}
+definitions:
+  Palette:
+    type: object
+    properties:
+      palette_name:
+        type: array
+        items:
+          $ref: '#/definitions/Color'
+  Color:
+    type: string
+responses:
+  200:
+    description: A list of products (may be filtered)

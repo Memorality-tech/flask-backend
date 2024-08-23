@@ -16,7 +16,7 @@ from selenium.webdriver.common.keys import Keys
 from datetime import datetime
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flasgger import Swagger
+from flasgger import Swagger, swag_from
 import uuid
 from flask_cors import CORS,cross_origin
 
@@ -334,108 +334,10 @@ def fetchData():
 
 # Flask route for the search function
 @app.route('/search', methods=['POST'])
+@swag_from('swagger/search.yml')
 def search():
-    """
-       Perform a search operation with pagination, filtering, and additional query parameters.
-       ---
-       tags:
-         - Search
-       requestBody:
-         description: JSON object containing search parameters.
-         required: true
-         content:
-           application/json:
-             schema:
-               type: object
-               properties:
-                 keyword:
-                   type: string
-                   description: The keyword used for searching the items.
-                   example: "example"
-                 offset:
-                   type: integer
-                   description: The number of items to skip for pagination.
-                   example: 0
-                 limit:
-                   type: integer
-                   description: The maximum number of items to return in the response.
-                   example: 10
-                 title:
-                   type: string
-                   description: (Optional) Filter results by item title.
-                   example: "Item Title"
-                 priceGte:
-                   type: number
-                   format: float
-                   description: (Optional) Filter results to include items with a price greater than or equal to this value.
-                   example: 10.00
-                 priceLte:
-                   type: number
-                   format: float
-                   description: (Optional) Filter results to include items with a price less than or equal to this value.
-                   example: 100.00
-                 categoryId:
-                   type: string
-                   description: (Optional) Filter results by category ID.
-                   example: "12345"
-                 locationId:
-                   type: string
-                   description: (Optional) Filter results by location ID.
-                   example: "67890"
-       responses:
-         200:
-           description: A list of search results and the total count of items.
-           content:
-             application/json:
-               schema:
-                 type: object
-                 properties:
-                   results:
-                     type: array
-                     items:
-                       type: object
-                       properties:
-                         id:
-                           type: integer
-                           description: Unique identifier for the item.
-                           example: 1
-                         name:
-                           type: string
-                           description: The name of the item.
-                           example: "Item Name"
-                         description:
-                           type: string
-                           description: A detailed description of the item.
-                           example: "A detailed description of the item."
-                         seller:
-                           type: string
-                           description: The seller or publisher of the item.
-                           example: "Seller Name"
-                   total_count:
-                     type: integer
-                     description: The total number of items available that match the search criteria.
-                     example: 100
-         400:
-           description: Bad request. The request was invalid or missing parameters.
-           content:
-             application/json:
-               schema:
-                 type: object
-                 properties:
-                   error:
-                     type: string
-                     example: "Invalid parameters"
-         500:
-           description: Internal server error. An unexpected error occurred on the server.
-           content:
-             application/json:
-               schema:
-                 type: object
-                 properties:
-                   error:
-                     type: string
-                     example: "Internal server error"
-       """
+
+
     try:
         data = request.json
         if not data:
@@ -463,7 +365,7 @@ def search():
         # Add price range filter if provided
         price_gte = data.get('priceGte')
         price_lte = data.get('priceLte')
-        if price_gte is 0 and price_lte is 0:
+        if price_gte == 0 and price_lte == 0:
             price_gte = None
             price_lte = None
         if price_gte is not None or price_lte is not None:
