@@ -463,6 +463,9 @@ def search():
         # Add price range filter if provided
         price_gte = data.get('priceGte')
         price_lte = data.get('priceLte')
+        if price_gte is 0 and price_lte is 0:
+            price_gte = None
+            price_lte = None
         if price_gte is not None or price_lte is not None:
             query_filter_conditions.append(
                 models.FieldCondition(
@@ -495,6 +498,7 @@ def search():
         #         )
         #     )
 
+        print(query_filter_conditions)
         query_filter = models.Filter(must=query_filter_conditions) if query_filter_conditions else None
    
         query_vector = text_to_vector(keyword)
@@ -588,9 +592,9 @@ def deleteBook(id):
 
 
 # Error handling for rate limit exceeded
-@app.errorhandler(429)
-def ratelimit_error(e):
-    return jsonify(error="ratelimit exceeded", message=str(e.description)), 429
+# @app.errorhandler(429)
+# def ratelimit_error(e):
+#     return jsonify(error="ratelimit exceeded", message=str(e.description)), 429
 
 
 if __name__ == "__main__":
