@@ -135,7 +135,7 @@ def crawl_data():
         text_vector = text_to_vector(combined_text)
         result['createdAt'] = get_current_timestamp()
         result['seller'] = result['metadata']['publisher']
-        result['seller']['subCategory'] = result['metadata']['subCategory']
+        result['categoryId'] = result['metadata']['subCategory']
         result['seller']['sellerId'] = str(uuid.uuid4())
         del result['metadata']
         points = [
