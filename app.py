@@ -188,28 +188,6 @@ def productBySellerName():
     return jsonify({"status": "success", 'data': search_result_dicts})
 
 
-@app.route('/get_category/<int:id>', methods=['GET'])
-def get_category_by_id(id):
-    data = request.json
-    query_vector = text_to_vector(id)
-
-    query_filter = models.Filter(
-        must=[
-            models.FieldCondition(
-                key="id",
-                match=models.MatchValue(value=id),
-            )
-        ]
-    )
-    search_result = qdrant_client.search(
-        collection_name=Config.get('CATAGORIES_COLLECTION'),
-        query_filter=query_filter,
-        query_vector=query_vector,
-        offset=data.get('offset', 0),
-        limit=data.get('limit', 10),
-    )
-    search_result_dicts = [record.dict() for record in search_result]
-    return jsonify({"status": "success", 'data': search_result_dicts})
 
 @app.route('/update_crawl_time', methods=['POST'])
 def update_crawl_time():
@@ -257,6 +235,28 @@ def get_collection_stats():
         "last_crawl_time": last_crawl_time
     })
 
+@app.route('/get_category/<string:id>', methods=['GET'])
+def get_category_by_id(id):
+    # data = request.json
+    query_vector = text_to_vector(id)
+   
+    query_filter = models.Filter(
+        must=[
+            models.FieldCondition(
+                key="id",
+                match=models.MatchValue(value=id),
+            )
+        ]
+    )
+    search_result = qdrant_client.search(
+        collection_name=Config.get('CATAGORIES_COLLECTION'),
+        query_filter=query_filter,
+        query_vector=query_vector,
+        offset=0,
+        limit=10,
+    )
+    search_result_dicts = [record.dict() for record in search_result]
+    return jsonify({"status": "success", 'data': search_result_dicts})
 
 @app.route('/crawltime', methods=['GET'])
 def get_time():
